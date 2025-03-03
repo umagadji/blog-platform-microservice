@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  user-db:
+    image: postgres:15
+    container_name: user-db
+    restart: always
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5433:5432"
+    networks:
+      - backend
+
+  post-db:
+    image: postgres:15
+    container_name: post-db
+    restart: always
+    environment:
+      POSTGRES_DB: postdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5434:5432"
+    networks:
+      - backend
+      
+  comments-db:
+    image: postgres:15
+    container_name: comments-db
+    restart: always
+    environment:
+      POSTGRES_DB: commentdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5435:5432"
+    networks:
+      - backend
+      
+  likes-db:
+    image: postgres:15
+    container_name: likes-db
+    restart: always
+    environment:
+      POSTGRES_DB: likedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5436:5432"
+    networks:
+      - backend
+      
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - backend
+      
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - backend
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    depends_on:
+      - user-db
+      - kafka
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/userdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      KAFKA_BROKER: kafka:9092
+    ports:
+      - "8081:8080"
+    networks:
+      - backend
+
+  post-service:
+    build: ./post-service
+    container_name: post-service
+    depends_on:
+      - post-db
+      - kafka
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://post-db:5432/postdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      KAFKA_BROKER: kafka:9092
+    ports:
+      - "8082:8080"
+    networks:
+      - backend
+      
+  comment-service:
+    build: ./comment-service
+    container_name: comment-service
+    depends_on:
+      - comments-db
+      - kafka
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://comments-db:5432/commentdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      KAFKA_BROKER: kafka:9092
+    ports:
+      - "8083:8080"
+    networks:
+      - backend
+      
+  like-service:
+    build: ./like-service
+    container_name: like-service
+    depends_on:
+      - likes-db
+      - kafka
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://likes-db:5432/likedb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      KAFKA_BROKER: kafka:9092
+    ports:
+      - "8084:8080"
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
